@@ -1,5 +1,8 @@
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+import os
+import seaborn as sns
 
 class DNN():
     def __init__(self, sizes: list, activation='sigmoid'):
@@ -123,6 +126,109 @@ class DNN():
             stats["test_loss"].append(test_loss)
         
         return stats
+    
+    def test(self, img, y=None, save_path='model_code/results/test.png'):
+        img_reshaped = img.reshape(1, -1)
+        pred_prob = self.forward(img_reshaped)
+        y_hat = np.argmax(pred_prob)
+        print(pred_prob)
+        plt.figure(figsize=(10, 4))
+        plt.subplot(1, 2, 1)
+        plt.imshow(img.reshape(28, 28), cmap='gray')
+        plt.axis('off')
+        plt.title('Input Image')
 
+        plt.subplot(1, 2, 2)
+        probabilities = pred_prob.flatten()
+        colors = ['lightcoral'] * 10
+        colors[y_hat] = 'lightgreen'
+        
+        plt.bar(range(10), probabilities, color=colors)
+        plt.xlabel('Digit')
+        plt.ylabel('Probability')
+        plt.title(f'Prediction: {y_hat}' + (f'\nActual: {y}' if y is not None else ''))
+        plt.xticks(range(10))
+        
+        plt.tight_layout()
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
+        
+        return y_hat
+    
+    def eval(self, X_train, y_train, X_test, y_test, stats=None, save_path='model_code/results/evals.png'):
+        sns.set_style("darkgrid")
+        fig = plt.figure(figsize=(20, 15))
 
+        # 1. Training History Plot
+        if stats:
+            plt.subplot(3, 2, 1)
+            plt.plot(stats['train_acc'], label='Train Accuracy')
+            plt.plot(stats['test_acc'], label='Test Accuracy')
+            plt.title('Training History - Accuracy')
+            plt.xlabel('Epoch')
+            plt.ylabel('Accuracy')
+            plt.legend()
+            
+            plt.subplot(3, 2, 2)
+            plt.plot(stats['train_loss'], label='Train Loss')
+            plt.plot(stats['test_loss'], label='Test Loss')
+            plt.title('Training History - Loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend()
 
+        # 2. Confusion Matrix
+        y_pred_test = np.argmax(self.forward(X_test), axis=0)
+        y_true_test = np.argmax(y_test, axis=1)
+        
+        conf_matrix = np.zeros((10, 10))
+        for i in range(len(y_true_test)):
+            conf_matrix[y_true_test[i]][y_pred_test[i]] += 1
+
+        plt.subplot(3, 2, 3)
+        sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues')
+        plt.title('Confusion Matrix')
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        
+        # 3. Sample Predictions (now limited to 3 samples)
+        n_samples = 3  # Changed from 5 to 3
+        random_indices = np.random.randint(0, len(X_test), n_samples)
+        
+        for idx, i in enumerate(random_indices):
+            plt.subplot(3, 2, 4 + idx)
+            img = X_test[i].reshape(28, 28)
+            pred_prob = self.forward(X_test[i].reshape(1, -1))
+            pred = np.argmax(pred_prob)
+            true = np.argmax(y_test[i])
+            
+            plt.imshow(img, cmap='gray')
+            plt.axis('off')
+            plt.title(f'Pred: {pred}, True: {true}')
+        
+        # 4. Add text information
+        test_acc = self.acc(y_test, self.forward(X_test))
+        train_acc = self.acc(y_train, self.forward(X_train))
+        test_loss = self.cross_entropy_loss(y_test, self.forward(X_test))
+        
+        info_text = (
+            f'Model Architecture: {self.sizes}\n'
+            f'Final Train Accuracy: {train_acc:.4f}\n'
+            f'Final Test Accuracy: {test_acc:.4f}\n'
+            f'Final Test Loss: {test_loss:.4f}\n'
+        )
+        
+        fig.text(0.02, 0.02, info_text, fontsize=10, family='monospace')
+        
+        plt.tight_layout()
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        plt.close()
+        
+        return {
+            'test_accuracy': test_acc,
+            'train_accuracy': train_acc,
+            'test_loss': test_loss,
+            'test_acc': test_acc
+        }

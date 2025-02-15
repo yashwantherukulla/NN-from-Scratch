@@ -1,8 +1,8 @@
 from sklearn.datasets import fetch_openml
 import numpy as np
 import matplotlib.pyplot as plt
-from DNN import DNN
 import time
+import os
 
 def fetch_mnist():
     print("Fetching MNIST dataset...")
@@ -30,7 +30,7 @@ def preprocess(X: np.ndarray, y: np.ndarray):
     print(f"Preprocessing completed in {time.time() - start_time:.2f} seconds")
     return X, y
 
-def show_graphs(stats: dict):
+def show_graphs(stats: dict, save_path='model_code/results/train.png'):
     train_losses = stats["train_loss"]
     train_accs = stats["train_acc"]
     test_losses = stats["test_loss"]
@@ -82,37 +82,6 @@ def show_graphs(stats: dict):
     ax4.legend()
     
     plt.tight_layout()
-    plt.savefig('results.png')
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
-
-
-def main():
-    print("\nStarting Neural Network training process")
-    
-    X, y = fetch_mnist()
-    X, y = preprocess(X, y)
-
-    train_size = 60000  # total is 70000
-    test_size = y.shape[0] - train_size
-    X_train, X_test = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
-    
-    print(f"Train set size: {train_size}, Test set size: {test_size}")
-
-    print("Shuffling training data...")
-    shuffle_index = np.random.permutation(np.arange(train_size))
-    X_train, y_train = X_train[shuffle_index], y_train[shuffle_index]
-
-    print("Initializing Neural Network...")
-    dnn = DNN(sizes=[784, 64, 10], activation='sigmoid')
-    
-    print("Starting training...")
-    training_start = time.time()
-    stats = dnn.train(X_train, y_train, X_test, y_test, epochs=10, batch_size=128, lr=0.01)
-    training_time = time.time() - training_start
-    show_graphs(stats)
-    
-    print(f"Training completed in {training_time:.2f} seconds")
-
-if __name__ == "__main__":
-    main()
