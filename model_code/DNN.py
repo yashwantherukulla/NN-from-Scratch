@@ -131,7 +131,6 @@ class DNN():
         img_reshaped = img.reshape(1, -1)
         pred_prob = self.forward(img_reshaped)
         y_hat = np.argmax(pred_prob)
-        print(pred_prob)
         plt.figure(figsize=(10, 4))
         plt.subplot(1, 2, 1)
         plt.imshow(img.reshape(28, 28), cmap='gray')
@@ -158,11 +157,11 @@ class DNN():
     
     def eval(self, X_train, y_train, X_test, y_test, stats=None, save_path='model_code/results/evals.png'):
         sns.set_style("darkgrid")
-        fig = plt.figure(figsize=(20, 15))
+        fig = plt.figure(figsize=(20, 20))
 
         # 1. Training History Plot
         if stats:
-            plt.subplot(3, 2, 1)
+            plt.subplot(4, 2, 1)
             plt.plot(stats['train_acc'], label='Train Accuracy')
             plt.plot(stats['test_acc'], label='Test Accuracy')
             plt.title('Training History - Accuracy')
@@ -170,7 +169,7 @@ class DNN():
             plt.ylabel('Accuracy')
             plt.legend()
             
-            plt.subplot(3, 2, 2)
+            plt.subplot(4, 2, 2)
             plt.plot(stats['train_loss'], label='Train Loss')
             plt.plot(stats['test_loss'], label='Test Loss')
             plt.title('Training History - Loss')
@@ -186,18 +185,71 @@ class DNN():
         for i in range(len(y_true_test)):
             conf_matrix[y_true_test[i]][y_pred_test[i]] += 1
 
-        plt.subplot(3, 2, 3)
+        plt.subplot(4, 2, 3)
         sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues')
         plt.title('Confusion Matrix')
         plt.xlabel('Predicted')
         plt.ylabel('True')
+
+        # 3. precision, recall, and F1-score
+        precision = np.zeros(10)
+        recall = np.zeros(10)
+        f1_score = np.zeros(10)
+        support = np.zeros(10)
+
+        for i in range(10):
+            tp = conf_matrix[i][i]
+            fp = np.sum(conf_matrix[:, i]) - tp
+            fn = np.sum(conf_matrix[i, :]) - tp
+            support[i] = np.sum(conf_matrix[i, :])
+            
+            precision[i] = tp / (tp + fp) if (tp + fp) > 0 else 0
+            recall[i] = tp / (tp + fn) if (tp + fn) > 0 else 0
+            f1_score[i] = 2 * (precision[i] * recall[i]) / (precision[i] + recall[i]) if (precision[i] + recall[i]) > 0 else 0
+
+        plt.subplot(4, 2, 4)
+        plt.axis('off')
         
-        # 3. Sample Predictions (now limited to 3 samples)
-        n_samples = 3  # Changed from 5 to 3
+        header = ['Class', 'Precision', 'Recall', 'F1-score', 'Support']
+        cell_text = []
+        
+        for i in range(10):
+            cell_text.append([
+                f'{i}',
+                f'{precision[i]:.2f}',
+                f'{recall[i]:.2f}',
+                f'{f1_score[i]:.2f}',
+                f'{int(support[i])}'
+            ])
+        
+        avg_precision = np.mean(precision)
+        avg_recall = np.mean(recall)
+        avg_f1 = np.mean(f1_score)
+        total_support = int(np.sum(support))
+        
+        cell_text.append([
+            'avg/total',
+            f'{avg_precision:.2f}',
+            f'{avg_recall:.2f}',
+            f'{avg_f1:.2f}',
+            f'{total_support}'
+        ])
+        
+        table = plt.table(cellText=cell_text,
+                        colLabels=header,
+                        loc='center',
+                        cellLoc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        table.scale(1.2, 1.5)
+        plt.title('Classification Report', pad=20)
+
+        # 4. Sample Predictions
+        n_samples = 4
         random_indices = np.random.randint(0, len(X_test), n_samples)
         
         for idx, i in enumerate(random_indices):
-            plt.subplot(3, 2, 4 + idx)
+            plt.subplot(4, 2, 5 + idx)
             img = X_test[i].reshape(28, 28)
             pred_prob = self.forward(X_test[i].reshape(1, -1))
             pred = np.argmax(pred_prob)
@@ -207,7 +259,7 @@ class DNN():
             plt.axis('off')
             plt.title(f'Pred: {pred}, True: {true}')
         
-        # 4. Add text information
+        # 5. Add text information
         test_acc = self.acc(y_test, self.forward(X_test))
         train_acc = self.acc(y_train, self.forward(X_train))
         test_loss = self.cross_entropy_loss(y_test, self.forward(X_test))
@@ -219,7 +271,7 @@ class DNN():
             f'Final Test Loss: {test_loss:.4f}\n'
         )
         
-        fig.text(0.02, 0.02, info_text, fontsize=10, family='monospace')
+        fig.text(0.01, 0.02, info_text, fontsize=10, family='monospace')
         
         plt.tight_layout()
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -230,5 +282,11 @@ class DNN():
             'test_accuracy': test_acc,
             'train_accuracy': train_acc,
             'test_loss': test_loss,
-            'test_acc': test_acc
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1_score,
+            'support': support,
+            'avg_precision': avg_precision,
+            'avg_recall': avg_recall,
+            'avg_f1': avg_f1
         }
