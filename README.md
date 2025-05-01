@@ -1,5 +1,6 @@
 # Deep Neural Network (DNN) from Scratch
 
+**NOTE:** This is a repo for the workshop **Init with CSI: Nerual Nets 101**. where basics of ML and buiding a NN from Scratch was taught. This repo is mainly for **Day 2** of the workshop. For day 1 consult this repo [Day-1 Code](https://github.com/praptisiva25/AI-ML-WorkShop-Day1) and the `./Day-1_presentation.pptx` . For Day-2 content, refer to the `excalidraw` file.
 ## Overview
 
 This project implements a fully connected deep neural network (DNN) from scratch using NumPy. The model is trained and evaluated on the MNIST dataset to classify handwritten digits (0-9). The implementation includes forward propagation, backpropagation, weight optimization, and model evaluation metrics.
